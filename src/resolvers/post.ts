@@ -43,4 +43,12 @@ export class PostResolver{
         }
         return post;
     }
+
+    @Mutation(() => Boolean) //graphql type
+    async deletePost (
+        @Arg('id') id: number,
+        @Ctx() {em}: MyContext): Promise<Boolean> { //ts type
+        await em.nativeDelete(Post, { id })
+        return true;
+    }
 }
