@@ -10,9 +10,9 @@ export default {
         pattern: /^[\w-]+\d+\.[tj]s$/,
     },
     entities: [Post, User],
-    dbName: "reddit-clone",
-    user: "ds52269-admin",
-    password: "postgres",
+    dbName: "",
+    user: "",
+    password: "",
     //user, pwd?
     type: "postgresql",
     //it means when we are not in production, debugging is on. 
