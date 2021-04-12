@@ -1,6 +1,6 @@
 import { User } from "../entities/User";
 import { MyContext } from "src/types";
-import { Arg, Ctx, Field, InputType, Mutation, ObjectType, Resolver } from "type-graphql";
+import { Arg, Ctx, Field, InputType, Mutation, ObjectType, Query, Resolver } from "type-graphql";
 import argon2 from 'argon2';
 // another way to use @Arg
 @InputType()
@@ -33,9 +33,25 @@ class LoginResponse {
 
 @Resolver()
 export class UserResolver{
+
+    @Query(() => User, {nullable: true})
+    async me(
+        @Ctx() { req, em }: MyContext
+    ) {
+        // you are not logged in
+        console.log('session:', req.session);
+        if (!req.session.sessionID) {
+            return null
+        }
+        const user = await em.findOne(User, {id: parseInt(req.session.sessionID)});
+        return user;
+    }
+
+
+
     @Mutation(() => LoginResponse)
     async register(@Arg('input') input: UsernamePassword,
-             @Ctx() {em}: MyContext): Promise<LoginResponse>{
+             @Ctx() {em,req}: MyContext): Promise<LoginResponse>{
         if (input.username.length <= 2) {
             return {
                 errors: [
@@ -51,7 +67,7 @@ export class UserResolver{
                 errors: [
                     {
                         field: 'password',
-                        msg: 'password must be at least 5 symbols long!'
+                        msg: 'password must be at least 6 symbols long!'
                     },
                 ],
             };
@@ -59,13 +75,27 @@ export class UserResolver{
         // using argon2 lib to hash passwords, so we don't store them as strings in db
         const hashedPwd = await argon2.hash(input.password);
         const user = em.create(User, {username: input.username, password: hashedPwd});
-        await em.persistAndFlush(user);
+        try {
+            await em.persistAndFlush(user);
+        }catch (err) {
+            if (err.code === "23505" || err.detail.includes("already exists")) {
+                return {
+                    errors: [
+                        {
+                            field: 'username',
+                            msg: 'Username laready exists'
+                        },
+                    ],
+                };
+            }
+        }
+        req.session.sessionID = user.id.toString();
         return {user};
     }
 
     @Mutation(() => LoginResponse)
     async login(@Arg('input') input: UsernamePassword,
-             @Ctx() {em}: MyContext): Promise<LoginResponse> {
+             @Ctx() {em, req}: MyContext): Promise<LoginResponse> {
         const user = await em.findOne(User, {username: input.username});
         if (!user) {
             return {
@@ -86,6 +116,7 @@ export class UserResolver{
                 ],
             };
         }
+        req.session.sessionID = user.id.toString();
         return {user};
     }
 }
