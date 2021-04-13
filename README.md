@@ -1,1 +1,1 @@
-# Reddit clone written in TypeScript. Used GraphQL, PostgreSQL
+# Reddit clone written in TypeScript. Used GraphQL, PostgreSQL, React, Next.js
